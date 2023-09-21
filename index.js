@@ -5,38 +5,52 @@ const axios = require('axios')
 const fse = require('fs-extra');
 const compressing = require('compressing');
 const currentPath = process.cwd();
-const fileData = fs.readFileSync(currentPath+'/remocollab.json', 'utf8');
+const remocollabConfig = JSON.parse(fs.readFileSync(currentPath+'/remocollab.json', 'utf8'));
+
+console.log(`Remocollab config loaded from remocollab.json`)
 
 
-
-console.log(fileData,currentPath,'fileData')
-
-const url = 'https://github.com/arextest/arex-request/archive/refs/heads/main.zip'; // 替换为要下载的zip文件URL
-
-axios({
-    method: 'get',
-    url: url,
-    responseType: 'arraybuffer'
-})
-    .then(response => {
-        fs.writeFileSync(currentPath+'/downloaded-zip.zip', response.data);
-        // 将压缩包解压到 test 文件夹中
-        compressing.zip.uncompress(currentPath+'/downloaded-zip.zip',currentPath+'/').then(() => {
-            console.log('解压完成')
-
-            const srcDir = currentPath+'/arex-request-main/packages'; // 替换为源文件夹的路径
-            const destDir = currentPath+'/src/components'; // 替换为目标文件夹的路径
-
-            fse.copySync(srcDir, destDir);
-        }).catch(() => {
-            console.log('解压失败')
-        })
+for (let i = 0; i < remocollabConfig.length; i++) {
+    const name = remocollabConfig[i].name;
+    const libs = remocollabConfig[i].libs;
+    const regex = /https:\/\/github.com\/(.*)\/(.*)/;
+    const match = name.match(regex);
+    const org = match[1];
+    const repo = match[2];
 
 
+    const downloadUrl = `${remocollabConfig[i].name}/archive/refs/heads/${remocollabConfig[i].branch}.zip`; // 替换为要下载的zip文件URL
+
+    const tempUrl = `./${org}-${repo}.zip`
+
+    const branch = remocollabConfig[i].branch;
+
+
+    axios({
+        method: 'GET',
+        url: downloadUrl,
+        responseType: 'arraybuffer'
     })
-    .catch(error => {
-        console.error(`Error downloading zip file: ${error}`);
-    });
+        .then(response => {
+            fs.writeFileSync(tempUrl, response.data);
+            compressing.zip.uncompress(tempUrl,currentPath+'/').then(() => {
+                const srcDir = `${currentPath}/${repo}-${branch}/${libs}`; // 替换为源文件夹的路径
+                const destDir = `${currentPath}/src/remocollab/${repo}`; // 替换为目标文件夹的路径
 
+                fse.removeSync(destDir);
+                fse.copySync(srcDir, destDir);
+
+                // 删除临时文件
+                fse.removeSync(`${currentPath}/${repo}-${branch}`);
+                fse.removeSync(tempUrl)
+                console.log(`✔ Generated Remocollab components (v0.0.1) to ./src/remocollab/${repo}`)
+            }).catch(() => {
+                console.log(`error code: 003`)
+            })
+        })
+        .catch(error => {
+            console.log(`error code: 002`)
+        });
+}
 
 

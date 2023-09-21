@@ -1,3 +1,12 @@
-{
-  "name": "nihao"
-}
+[
+  {
+    "name": "https://github.com/arextest/arex-request",
+    "branch": "dev",
+    "libs": "packages"
+  },
+  {
+    "name": "https://github.com/arextest/arex",
+    "branch": "main",
+    "libs": "packages/arex-core"
+  }
+]
